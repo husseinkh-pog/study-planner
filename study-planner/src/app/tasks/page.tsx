@@ -23,6 +23,35 @@ export default function TasksPage() {
     fetchTasks();
   }, []);
 
+  const toggleTaskCompletion = async (taskId: number, currentStatus: boolean) => {
+    try {
+      // Optimistic update
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === taskId ? { ...t, completed: !currentStatus } : t
+        )
+      );
+
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: !currentStatus }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update task on server');
+      }
+    } catch (error) {
+      console.error(error);
+      // Revert optimistic update on error
+      setTasks((prevTasks) =>
+        prevTasks.map((t) =>
+          t.id === taskId ? { ...t, completed: currentStatus } : t
+        )
+      );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-6 sm:p-12">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -89,7 +118,9 @@ export default function TasksPage() {
                     </span>
                   </div>
                   
-                  <h3 className="text-2xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors mb-3 leading-tight">
+                  <h3 className={`text-2xl font-bold group-hover:text-indigo-600 transition-colors mb-3 leading-tight ${
+                    task.completed ? 'text-slate-400 line-through' : 'text-slate-900'
+                  }`}>
                     {task.title}
                   </h3>
                   
@@ -99,11 +130,38 @@ export default function TasksPage() {
                     </p>
                   )}
                   
-                  <div className="pt-5 mt-auto border-t border-slate-100 flex items-center text-sm text-slate-600 font-medium">
-                    <svg className="w-4 h-4 mr-2 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {task.dueDate}
+                  <div className="pt-5 mt-auto border-t border-slate-100 flex items-center justify-between text-sm text-slate-600 font-medium">
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {task.dueDate}
+                    </div>
+                    
+                    <button
+                      onClick={() => toggleTaskCompletion(task.id, task.completed)}
+                      className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        task.completed 
+                          ? 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700' 
+                          : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                      }`}
+                    >
+                      {task.completed ? (
+                        <>
+                          <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Undo
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                          Mark Complete
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               ))}
